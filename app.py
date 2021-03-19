@@ -25,9 +25,14 @@ def main():
     # birthdate = st.date_input('생년월일')
     # birthtime = st.time_input('시간 입력')
     
-    
-    if st.button(' 저장 ') :
-        st.success('저장되었습니다.')
+    st.subheader('몇년도 이후 몇페이지 이상되는 책을 검색하고 싶은가요.')
+    released_year = st.number_input('년도 입력', min_value=1800, max_value=2050)
+    pages = st.number_input('페이지수 입력', min_value=10)
+    order = 'asc'
+    if st.checkbox("오름차순 / 내림차순") :
+        order = 'desc'
+    if st.button(' 검색 ') :
+        st.success('검색되었습니다.')
      
         try :
             # 커넥터로부터 커넥션을 받는다.
@@ -50,21 +55,49 @@ def main():
             
                 
 
-                query = '''insert into cats4(name, age)
-                                values (%s, %s);'''         ## 쿼리의 데이터는 다 변수처리해서 한다. 하드코딩 방지.
+                query = '''select * from books;'''         ## 쿼리의 데이터는 다 변수처리해서 한다. 하드코딩 방지.
                 #변수 들어갈 자리는 %s 로 표현한다.
-                record = [ ('냐웅이', 1 ), ( '나비', 3 ), ('단비', 5) ]                #여러개 insert는 리스트..
-                print(record)
+                #record = [ ('냐웅이', 1 ), ( '나비', 3 ), ('단비', 5) ]                #여러개 insert는 리스트..
+                #print(record) 
                
 
-                cursor.executemany(query, record)              # 하나는 execute   , 여러개는 executemany
+                cursor.execute(query)    # select용
+                #cursor.execute(query, record)              # 하나는 execute   , 여러개는 executemany , insert 용
                 # insert 는 commit 을 해줘야한다.
-                connection.commit()
-                print('{}개 적용됨'.format(cursor.rowcount))
+                #connection.commit()             #insert용  , 데이터베이스에 반영하라!
+                print('{}개 적용됨'.format(cursor.rowcount))   # insert 확인용
 
                 # 4. 실행 후 커서에서 결과를 빼낸다.
-                #record = cursor.fetchone()                       인서트에서는 필요가 없다.
-                #print('Connected to db : ', record )
+                results = cursor.fetchall()               # select용     인서트에서는 필요가 없다.
+                print('Connected to db : ', results )
+
+                #  추가 작업 하고 싶은거  (책 제목 가져와보기)
+                #for data in results :
+                    #print(data[1])
+
+                # 같은 쿼리문으로 다른 결과가 나온다 . 차이점 보기.
+                
+                #released_year = 2005
+                #pages = 400
+                param = (released_year, pages  )              # 콤마로 튜플 만들어줘야됨
+                cursor = connection.cursor(dictionary = True)        # 딕셔너리 형식으로 나온다. 컬럼도 나옴.
+                if order == 'asc' :
+                    query = """ select title, released_year, pages
+                            from books
+                            where released_year > %s and pages > %s
+                            order by released_year asc ; """
+                else :
+                    query = """ select title, released_year, pages
+                            from books
+                            where released_year > %s and pages > %s
+                            order by released_year desc ; """
+                cursor.execute(query, param)          
+                results = cursor.fetchall()
+                print(results)
+                st.write(results)
+
+                for data in results :
+                    print(data['title'], data['released_year'])
 
         except Error as e :
             print('db관련 에러 발생', e)
